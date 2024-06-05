@@ -55,8 +55,15 @@ This repository contains a simple MQTT client-server setup where the server send
 
 ## Running the example
 1. **Set the Environment Variable:**
+
+   On the broker machine, run:
    ```bash
    export MQTT_BROKER=localhost  # For Windows use `set MQTT_BROKER=localhost`
+   ```
+   
+   On client machines, run:
+   ```bash
+   export MQTT_BROKER=<MQTT_BROKER_IP_ADDRESS>
    ```
    
 2. **Run the Subscriber:**
