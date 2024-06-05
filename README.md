@@ -23,6 +23,16 @@ This repository contains a simple MQTT client-server setup where the server send
    
 3. **Set Up the MQTT Broker:** <br>
    Install and run an MQTT broker (e.g., Mosquitto).
+   <br> For Ubuntu: 
+   ```bash
+   sudo apt-get update
+   sudo apt-get install mosquitto mosquitto-clients
+   sudo systemctl enable mosquitto
+   sudo systemctl start mosquitto
+   ```
+   
+   <br> For Windows:
+[Mosquitto download link.](https://mosquitto.org/download/)
 
 ## Running the example
 1. **Set the Environment Variable:**
