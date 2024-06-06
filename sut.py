@@ -2,8 +2,9 @@ import paho.mqtt.client as mqtt
 import configparser
 import subprocess
 import os
+import time
 from queue import Queue
-from threading import Thread, Event, Timer
+from threading import Thread, Event
 
 
 class SUT:
