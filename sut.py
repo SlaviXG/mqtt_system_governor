@@ -3,11 +3,11 @@ import configparser
 import subprocess
 import os
 from queue import Queue
-from threading import Thread, Event
+from threading import Thread, Event, Timer
 
 
 class SUT:
-    def __init__(self, client_id: str, broker: str, port: int, command_topic: str, response_topic: str, registration_topic: str, *args, **kwargs):
+    def __init__(self, client_id: str, broker: str, port: int, command_topic: str, response_topic: str, registration_topic: str, ack_topic: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._client_id = client_id
         self._broker = broker
@@ -15,30 +15,47 @@ class SUT:
         self._command_topic = command_topic
         self._response_topic = response_topic
         self._registration_topic = registration_topic
+        self._ack_topic = ack_topic
         self._client = mqtt.Client(client_id=client_id)
         self._client.on_connect = self.on_connect
         self._client.on_message = self.on_message
         self._command_queue = Queue()
         self._stop_event = Event()
+        self._ack_received = Event()
 
         # Start the command processing thread
         self._worker_thread = Thread(target=self._process_commands)
         self._worker_thread.start()
 
+        # Start the registration thread
+        self._registration_thread = Thread(target=self._send_registration)
+        self._registration_thread.start()
+
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             print(f"Connected successfully to {self._broker}:{self._port}")
             self._client.subscribe(self._command_topic)
-            self._client.publish(self._registration_topic, self._client_id)
+            self._client.subscribe(self._ack_topic)
         else:
             print(f"Connection failed with code {rc}")
 
     def on_message(self, client, userdata, msg):
         message = msg.payload.decode()
-        msg_client_id, command = message.split('|', 1)
-        if msg_client_id == self._client_id:
-            print(f"Received command for {self._client_id}: {command}")
-            self._command_queue.put(command)
+        if msg.topic == self._ack_topic:
+            if message == self._client_id:
+                print(f"Received acknowledgment for {self._client_id}")
+                self._ack_received.set()
+        else:
+            msg_client_id, command = message.split('|', 1)
+            if msg_client_id == self._client_id:
+                print(f"Received command for {self._client_id}: {command}")
+                self._command_queue.put(command)
+
+    def _send_registration(self):
+        while not self._ack_received.is_set():
+            self._client.publish(self._registration_topic, self._client_id)
+            print(f"Sent registration for {self._client_id}")
+            time.sleep(5)  # Wait before resending registration
 
     def _process_commands(self):
         while not self._stop_event.is_set():
@@ -69,6 +86,7 @@ class SUT:
         self._stop_event.set()
         self._command_queue.put(None)
         self._worker_thread.join()
+        self._registration_thread.join()
 
 
 if __name__ == '__main__':
@@ -79,8 +97,9 @@ if __name__ == '__main__':
     command_topic = config['mqtt']['command_topic']
     response_topic = config['mqtt']['response_topic']
     registration_topic = config['mqtt']['registration_topic']
+    ack_topic = config['mqtt']['ack_topic']
     client_id = os.getenv('CLIENT_ID') or 'client1'  # Default to 'client1' if CLIENT_ID not set
-    sut = SUT(client_id, broker, port, command_topic, response_topic, registration_topic)
+    sut = SUT(client_id, broker, port, command_topic, response_topic, registration_topic, ack_topic)
     try:
         sut.run()
     except KeyboardInterrupt:

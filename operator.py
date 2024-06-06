@@ -2,17 +2,19 @@ import paho.mqtt.client as mqtt
 import configparser
 import os
 from threading import Lock
+import time
 
 
 class Operator:
     def __init__(self, broker: str, port: int, command_topic: str, response_topic: str, registration_topic: str,
-                 commands: list[str], *args, **kwargs):
+                 ack_topic: str, commands: list[str], *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._broker = broker
         self._port = port
         self._command_topic = command_topic
         self._response_topic = response_topic
         self._registration_topic = registration_topic
+        self._ack_topic = ack_topic
         self._commands = commands
         self._clients = set()
         self._client = mqtt.Client()
@@ -31,8 +33,10 @@ class Operator:
 
         if topic == self._registration_topic:
             with self._lock:
-                self._clients.add(payload)
-                print(f"Registered client: {payload}")
+                if payload not in self._clients:
+                    self._clients.add(payload)
+                    print(f"Registered client: {payload}")
+                    self._client.publish(self._ack_topic, payload)
         elif topic == self._response_topic:
             print(f"Received feedback:\n{payload}")
 
@@ -40,11 +44,14 @@ class Operator:
         self._client.connect(self._broker, self._port, keepalive=60)
         self._client.loop_start()
 
-        input("Press Enter to start sending commands...\n")
+        print("Waiting for clients to register...")
+        while True:
+            with self._lock:
+                if self._clients:
+                    break
+            time.sleep(1)  # Wait for clients to register
 
-        while not self._clients:
-            print("Waiting for clients to register...")
-            self._client.loop(timeout=1.0)  # Wait for clients to register
+        print(f"Registered clients: {', '.join(self._clients)}")
 
         with self._lock:
             for client_id in self._clients:
@@ -67,6 +74,7 @@ if __name__ == '__main__':
     command_topic = config['mqtt']['command_topic']
     response_topic = config['mqtt']['response_topic']
     registration_topic = config['mqtt']['registration_topic']
+    ack_topic = config['mqtt']['ack_topic']
     commands = [c.strip() for c in config['operator']['commands'].split(';')]
-    operator = Operator(broker, port, command_topic, response_topic, registration_topic, commands)
+    operator = Operator(broker, port, command_topic, response_topic, registration_topic, ack_topic, commands)
     operator.run()
