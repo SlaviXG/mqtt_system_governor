@@ -8,7 +8,14 @@ from threading import Thread, Event
 
 
 class SUT:
-    def __init__(self, client_id: str, broker: str, port: int, command_topic: str, response_topic: str, registration_topic: str, ack_topic: str, *args, **kwargs):
+    def __init__(self, client_id: str,
+                 broker: str,
+                 port: int,
+                 command_topic: str,
+                 response_topic: str,
+                 registration_topic: str,
+                 ack_topic: str,
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._client_id = client_id
         self._broker = broker

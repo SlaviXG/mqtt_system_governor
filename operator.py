@@ -6,8 +6,16 @@ import time
 
 
 class Operator:
-    def __init__(self, broker: str, port: int, command_topic: str, response_topic: str, registration_topic: str,
-                 ack_topic: str, commands: list[str], *args, **kwargs):
+    def __init__(self,
+                 broker: str,
+                 port: int,
+                 command_topic: str,
+                 response_topic: str,
+                 registration_topic: str,
+                 ack_topic: str,
+                 registration_timeout: int,
+                 commands: list[str],
+                 *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._broker = broker
         self._port = port
@@ -15,6 +23,7 @@ class Operator:
         self._response_topic = response_topic
         self._registration_topic = registration_topic
         self._ack_topic = ack_topic
+        self._registration_timeout = registration_timeout
         self._commands = commands
         self._clients = set()
         self._client = mqtt.Client()
@@ -44,11 +53,15 @@ class Operator:
         self._client.connect(self._broker, self._port, keepalive=60)
         self._client.loop_start()
 
+        last_registration_time = time.time()
         print("Waiting for clients to register...")
         while True:
             with self._lock:
                 if self._clients:
-                    break
+                    if time.time() - last_registration_time > self._registration_timeout:
+                        break
+                else:
+                    last_registration_time = time.time()
             time.sleep(1)  # Wait for clients to register
 
         print(f"Registered clients: {', '.join(self._clients)}")
@@ -76,5 +89,13 @@ if __name__ == '__main__':
     registration_topic = config['mqtt']['registration_topic']
     ack_topic = config['mqtt']['ack_topic']
     commands = [c.strip() for c in config['operator']['commands'].split(';')]
-    operator = Operator(broker, port, command_topic, response_topic, registration_topic, ack_topic, commands)
+    registration_timeout = int(config['operator']['registration_timeout'])
+    operator = Operator(broker,
+                        port,
+                        command_topic,
+                        response_topic,
+                        registration_topic,
+                        ack_topic,
+                        registration_timeout,
+                        commands)
     operator.run()
