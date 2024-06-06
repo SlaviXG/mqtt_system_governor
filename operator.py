@@ -76,7 +76,7 @@ if __name__ == '__main__':
     command_topic = config['mqtt']['command_topic']
     response_topic = config['mqtt']['response_topic']
 
-    commands = config['operator']['commands'].strip().split('\n')
+    commands = [c.strip() for c in config['operator']['commands'].split(';')]
 
     # Create a new client instance
     operator = Operator(broker, port, command_topic, response_topic, commands)
