@@ -1,11 +1,10 @@
 import paho.mqtt.client as mqtt
+import configparser
 import os
 
 # Read the broker address from the environment variable
 broker = os.getenv('MQTT_BROKER', 'localhost')
 port = 1883
-topic = 'commands/system_performance'
-response_topic = 'responses/system_performance'
 
 # Define performance measurement commands
 commands = [
@@ -19,7 +18,7 @@ class Operator:
     def __init__(self,
                  broker: str,
                  port: int,
-                 topic: str,
+                 command_topic: str,
                  response_topic: str,
                  commands: list[str],
                  *args,
@@ -29,7 +28,7 @@ class Operator:
         # Establish configuration
         self._broker = broker
         self._port = port
-        self._topic = topic
+        self._command_topic = command_topic
         self._response_topic = response_topic
         self._commands = commands
         self._client = mqtt.Client()
@@ -53,7 +52,7 @@ class Operator:
 
         # Publish commands to the topic
         for command in commands:
-            self._client.publish(topic, command)
+            self._client.publish(self._command_topic, command)
             print(f"Published command: {command}")
 
         # Start the MQTT client loop to listen for responses
@@ -68,7 +67,18 @@ class Operator:
 
 
 if __name__ == '__main__':
+    # Read configuration
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    broker = os.getenv('MQTT_BROKER') if os.getenv('MQTT_BROKER') is not None else config['mqtt']['broker']
+    port = int(config['mqtt']['port'])
+    command_topic = config['mqtt']['command_topic']
+    response_topic = config['mqtt']['response_topic']
+
+    commands = config['operator']['commands'].strip().split('\n')
+
     # Create a new client instance
-    operator = Operator(broker, port, topic, response_topic, commands)
+    operator = Operator(broker, port, command_topic, response_topic, commands)
     # Run System Operator
     operator.run()

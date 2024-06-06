@@ -1,19 +1,14 @@
 import paho.mqtt.client as mqtt
-import os
+import configparser
 import subprocess
-
-# Read the broker address from the environment variable
-broker = os.getenv('MQTT_BROKER', 'localhost')
-port = 1883
-topic = 'commands/system_performance'
-response_topic = 'responses/system_performance'
+import os
 
 
 class SUT:
     def __init__(self,
                  broker: str,
                  port: int,
-                 topic: str,
+                 command_topic: str,
                  response_topic: str,
                  *args,
                  **kwargs):
@@ -22,7 +17,7 @@ class SUT:
         # Establish configuration
         self._broker = broker
         self._port = port
-        self._topic = topic
+        self._command_topic = command_topic
         self._response_topic = response_topic
         self._client = mqtt.Client()
 
@@ -33,7 +28,7 @@ class SUT:
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             print(f"Connected successfully to {broker}:{port}")
-            self._client.subscribe(topic)
+            self._client.subscribe(self._command_topic)
         else:
             print(f"Connection failed with code {rc}")
 
@@ -66,7 +61,17 @@ class SUT:
 
 
 if __name__ == '__main__':
+    # Read configuration
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    broker = os.getenv('MQTT_BROKER') if os.getenv('MQTT_BROKER') is not None else config['mqtt']['broker']
+    port = int(config['mqtt']['port'])
+    command_topic = config['mqtt']['command_topic']
+    response_topic = config['mqtt']['response_topic']
+
     # Create a new MQTT client instance
-    sut = SUT(broker, port, topic, response_topic)
+    sut = SUT(broker, port, command_topic, response_topic)
+
     # Run System Under Test
     sut.run()
