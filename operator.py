@@ -15,7 +15,7 @@ commands = [
 ]
 
 
-class Operator(mqtt.Client):
+class Operator:
     def __init__(self,
                  broker: str,
                  port: int,
@@ -26,44 +26,45 @@ class Operator(mqtt.Client):
                  **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Establish client configuration
+        # Establish configuration
         self._broker = broker
         self._port = port
         self._topic = topic
         self._response_topic = response_topic
         self._commands = commands
+        self._client = mqtt.Client()
 
-        # # Set the callbacks for connection and message reception
-        # self.on_connect = self._on_connect
-        # self.on_message = self._on_message
+        # Set the callbacks for connection and message reception
+        self._client.on_connect = self.on_connect
+        self._client.on_message = self.on_message
 
-    def _on_connect(self, userdata, flags, rc):
+    def on_connect(self, client, userdata, flags, rc):
         print(f"Connected with result code {rc}")
         # Subscribe to the response topic
-        self.subscribe(self._response_topic)
+        self._client.subscribe(self._response_topic)
 
-    def _on_message(self, userdata, msg):
+    def on_message(self, client, userdata, msg):
         feedback = msg.payload.decode()
         print(f"Received feedback:\n{feedback}")
 
     def run(self):
         # Connect to the MQTT broker
-        self.connect(self._broker, self._port, keepalive=60)
+        self._client.connect(self._broker, self._port, keepalive=60)
 
         # Publish commands to the topic
         for command in commands:
-            self.publish(topic, command)
+            self._client.publish(topic, command)
             print(f"Published command: {command}")
 
         # Start the MQTT client loop to listen for responses
-        self.loop_start()
+        self._client.loop_start()
 
         # Keep the script running to receive feedback
         input("Press Enter to exit...\n")
 
         # Stop the MQTT client loop and disconnect
-        self.loop_stop()
-        self.disconnect()
+        self._client.loop_stop()
+        self._client.disconnect()
 
 
 if __name__ == '__main__':
