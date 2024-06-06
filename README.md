@@ -68,8 +68,10 @@ This repository contains a simple MQTT client-server setup where the server send
    
 2. **Run the System Under Test (SUT):**
    ```bash
+   export CLIENT_ID=client1
    python sut.py
    ```
+   (Different IDs for different clients should be used)   
 
 3. **Run the System Operator:**
    ```bash
