@@ -2,17 +2,6 @@ import paho.mqtt.client as mqtt
 import configparser
 import os
 
-# Read the broker address from the environment variable
-broker = os.getenv('MQTT_BROKER', 'localhost')
-port = 1883
-
-# Define performance measurement commands
-commands = [
-    'echo CPU Usage: && top -b -n1 | grep "Cpu(s)"',
-    'echo Memory Usage: && free -m',
-    'echo Disk Usage: && df -h'
-]
-
 
 class Operator:
     def __init__(self,
