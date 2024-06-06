@@ -10,14 +10,17 @@ response_topic = 'responses/system_performance'
 # Create a new MQTT client instance
 client = mqtt.Client()
 
+
 def on_connect(client, userdata, flags, rc):
     print(f"Connected with result code {rc}")
     # Subscribe to the response topic
     client.subscribe(response_topic)
 
+
 def on_message(client, userdata, msg):
     feedback = msg.payload.decode()
     print(f"Received feedback:\n{feedback}")
+
 
 # Set the callbacks for connection and message reception
 client.on_connect = on_connect

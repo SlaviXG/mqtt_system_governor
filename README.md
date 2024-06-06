@@ -66,12 +66,12 @@ This repository contains a simple MQTT client-server setup where the server send
    export MQTT_BROKER=<MQTT_BROKER_IP_ADDRESS>
    ```
    
-2. **Run the Subscriber:**
+2. **Run the System Under Test (SUT):**
    ```bash
-   python subscriber.py
+   python sut.py
    ```
 
-3. **Run the Publisher:**
+3. **Run the System Operator:**
    ```bash
-   python publisher.py
+   python operator.py
    ```
