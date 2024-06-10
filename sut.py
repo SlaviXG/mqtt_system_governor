@@ -78,6 +78,7 @@ class SUT:
                 self._command_queue.put(command)
 
     def _send_registration(self):
+        time.sleep(0.5) # Wait for starting execution of other threads
         while not self._ack_received.is_set():
             self._client.publish(self._registration_topic, self._client_id)
             color_log.log_info(f"Sent registration for {self._client_id}")
