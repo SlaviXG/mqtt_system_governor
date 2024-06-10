@@ -79,17 +79,17 @@ class SUT:
                 error = result.stderr
                 feedback = (f"Client: {self._client_id}\n"
                             f"Command: {command}\n"
-                            f"Start Time: {start_time.isoformat()} ({start_time})\n"
-                            f"End Time: {end_time.isoformat()} ({end_time})\n"
+                            f"Start Time: {start_time.isoformat()} ({start_time.timestamp()})\n"
+                            f"End Time: {end_time.isoformat()} ({end_time.timestamp()})\n"
                             f"Output: {output}\n"
                             f"Error: {error if error else 'None'}")
                 self._client.publish(self._response_topic, feedback)
             except Exception as e:
-                end_time = datetime.now().isoformat()
+                end_time = datetime.now()
                 error_feedback = (f"Client: {self._client_id}\n"
                                   f"Command: {command}\n"
-                                  f"Start Time: {start_time}\n"
-                                  f"End Time: {end_time}\n"
+                                  f"Start Time: {start_time.isoformat()} ({start_time.timestamp()})\n"
+                                  f"End Time: {end_time.isoformat()} ({end_time.timestamp()})\n"
                                   f"Error: Failed to execute command: {e}")
                 self._client.publish(self._response_topic, error_feedback)
             self._command_queue.task_done()
@@ -107,6 +107,7 @@ class SUT:
         self._command_queue.put(None)
         self._worker_thread.join()
         self._registration_thread.join()
+
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
