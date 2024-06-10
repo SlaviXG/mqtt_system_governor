@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import configparser
 import os
-from threading import Lock
+from threading import Lock, Thread
 import time
 
 
@@ -14,7 +14,9 @@ class Operator:
                  registration_topic: str,
                  ack_topic: str,
                  registration_timeout: int,
-                 commands: list[str],
+                 pipelines: dict,
+                 pipeline_mode: bool,
+                 realtime_mode: bool,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._broker = broker
@@ -24,7 +26,9 @@ class Operator:
         self._registration_topic = registration_topic
         self._ack_topic = ack_topic
         self._registration_timeout = registration_timeout
-        self._commands = commands
+        self._pipelines = pipelines
+        self._pipeline_mode = pipeline_mode
+        self._realtime_mode = realtime_mode
         self._clients = set()
         self._client = mqtt.Client()
         self._client.on_connect = self.on_connect
@@ -65,17 +69,39 @@ class Operator:
 
         print(f"Registered clients: {', '.join(self._clients)}")
 
-        with self._lock:
-            for client_id in self._clients:
-                for command in self._commands:
-                    message = f"{client_id}|{command}"
-                    self._client.publish(self._command_topic, message)
-                    print(f"Published command to {client_id}: {command}")
+        if self._pipeline_mode:
+            self.run_pipelines()
+
+        if self._realtime_mode:
+            self.run_realtime_mode()
 
         input("Press Enter to exit...\n")
 
         self._client.loop_stop()
         self._client.disconnect()
+
+    def run_pipelines(self):
+        print("Running pipelines...")
+        with self._lock:
+            for pipeline_name, pipeline_commands in self._pipelines.items():
+                for client_id in self._clients:
+                    for command in pipeline_commands.split(';'):
+                        message = f"{client_id}|{command.strip()}"
+                        self._client.publish(self._command_topic, message)
+                        print(f"Published command to {client_id}: {command.strip()}")
+                        time.sleep(1)  # Add a delay to ensure commands are processed sequentially
+
+    def run_realtime_mode(self):
+        print("Entering real-time command mode...")
+        while True:
+            command = input("Enter command to send to all clients (or 'exit' to quit): ")
+            if command.lower() == 'exit':
+                break
+            with self._lock:
+                for client_id in self._clients:
+                    message = f"{client_id}|{command.strip()}"
+                    self._client.publish(self._command_topic, message)
+                    print(f"Published command to {client_id}: {command.strip()}")
 
 
 if __name__ == '__main__':
@@ -87,8 +113,10 @@ if __name__ == '__main__':
     response_topic = config['mqtt']['response_topic']
     registration_topic = config['mqtt']['registration_topic']
     ack_topic = config['mqtt']['ack_topic']
-    commands = [c.strip() for c in config['operator']['commands'].split(';')]
     registration_timeout = int(config['operator']['registration_timeout'])
+    pipeline_mode = config.getboolean('operator', 'pipeline_mode')
+    realtime_mode = config.getboolean('operator', 'realtime_mode')
+    pipelines = {k: v for k, v in config['operator'].items() if k.startswith('pipeline')}
     operator = Operator(broker,
                         port,
                         command_topic,
@@ -96,5 +124,7 @@ if __name__ == '__main__':
                         registration_topic,
                         ack_topic,
                         registration_timeout,
-                        commands)
+                        pipelines,
+                        pipeline_mode,
+                        realtime_mode)
     operator.run()
