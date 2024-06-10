@@ -7,6 +7,7 @@ import json
 from queue import Queue
 from threading import Thread, Event
 from datetime import datetime
+import color_log
 
 
 class SUT:
@@ -18,6 +19,7 @@ class SUT:
                  registration_topic: str,
                  ack_topic: str,
                  jsonify: bool,
+                 colorlog: bool,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._client_id = client_id
@@ -28,6 +30,8 @@ class SUT:
         self._registration_topic = registration_topic
         self._ack_topic = ack_topic
         self._jsonify = jsonify
+        self._colorlog = colorlog
+        color_log.enable_color_logging(self._colorlog)
         self._client = mqtt.Client(client_id=client_id)
         self._client.on_connect = self.on_connect
         self._client.on_message = self.on_message
@@ -45,17 +49,17 @@ class SUT:
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            print(f"Connected successfully to {self._broker}:{self._port}")
+            color_log.log_info(f"Connected successfully to {self._broker}:{self._port}")
             self._client.subscribe(self._command_topic)
             self._client.subscribe(self._ack_topic)
         else:
-            print(f"Connection failed with code {rc}")
+            color_log.log_error(f"Connection failed with code {rc}")
 
     def on_message(self, client, userdata, msg):
         message = msg.payload.decode()
         if msg.topic == self._ack_topic:
             if message == self._client_id:
-                print(f"Received acknowledgment for {self._client_id}")
+                color_log.log_info(f"Received acknowledgment for {self._client_id}")
                 self._ack_received.set()
         else:
             if self._jsonify:
@@ -64,19 +68,19 @@ class SUT:
                     msg_client_id = data['client_id']
                     command = data['command']
                 except json.JSONDecodeError as e:
-                    print(f"Failed to decode JSON message: {e}")
+                    color_log.log_error(f"Failed to decode JSON message: {e}")
                     return
             else:
                 msg_client_id, command = message.split('|', 1)
 
             if msg_client_id == self._client_id:
-                print(f"Received command for {self._client_id}: {command}")
+                color_log.log_warning(f"Received command for {self._client_id}: {command}")
                 self._command_queue.put(command)
 
     def _send_registration(self):
         while not self._ack_received.is_set():
             self._client.publish(self._registration_topic, self._client_id)
-            print(f"Sent registration for {self._client_id}")
+            color_log.log_info(f"Sent registration for {self._client_id}")
             time.sleep(5)  # Wait before resending registration
 
     def _process_commands(self):
@@ -84,7 +88,7 @@ class SUT:
             command = self._command_queue.get()
             if command is None:
                 break
-            print(f"Executing command: {command}")
+            color_log.log_warning(f"Executing command: {command}")
             try:
                 start_time = datetime.now()
                 start_iso = start_time.isoformat()
@@ -133,11 +137,11 @@ class SUT:
             self._command_queue.task_done()
 
     def run(self):
-        print(f"Attempting to connect to broker at {self._broker}:{self._port}")
+        color_log.log_info(f"Attempting to connect to broker at {self._broker}:{self._port}")
         try:
             self._client.connect(self._broker, self._port, 60)
         except Exception as e:
-            print(f"Connection to broker failed: {e}")
+            color_log.log_error(f"Connection to broker failed: {e}")
         self._client.loop_forever()
 
     def stop(self):
@@ -157,8 +161,9 @@ if __name__ == '__main__':
     registration_topic = config['mqtt']['registration_topic']
     ack_topic = config['mqtt']['ack_topic']
     jsonify = config.getboolean('operator', 'jsonify')
+    colorlog = config.getboolean('operator', 'colorlog')
     client_id = os.getenv('CLIENT_ID') or 'client1'  # Default to 'client1' if CLIENT_ID not set
-    sut = SUT(client_id, broker, port, command_topic, response_topic, registration_topic, ack_topic, jsonify)
+    sut = SUT(client_id, broker, port, command_topic, response_topic, registration_topic, ack_topic, jsonify, colorlog)
     try:
         sut.run()
     except KeyboardInterrupt:

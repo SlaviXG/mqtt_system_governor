@@ -2,8 +2,9 @@ import paho.mqtt.client as mqtt
 import configparser
 import os
 import json
-from threading import Lock, Thread
 import time
+from threading import Lock
+import color_log
 
 
 class Operator:
@@ -19,6 +20,7 @@ class Operator:
                  pipeline_mode: bool,
                  realtime_mode: bool,
                  jsonify: bool,
+                 colorlog: bool,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._broker = broker
@@ -32,6 +34,8 @@ class Operator:
         self._pipeline_mode = pipeline_mode
         self._realtime_mode = realtime_mode
         self._jsonify = jsonify
+        self._colorlog = colorlog
+        color_log.enable_color_logging(self._colorlog)
         self._clients = set()
         self._client = mqtt.Client()
         self._client.on_connect = self.on_connect
@@ -39,7 +43,7 @@ class Operator:
         self._lock = Lock()
 
     def on_connect(self, client, userdata, flags, rc):
-        print(f"Connected with result code {rc}")
+        color_log.log_info(f"Connected with result code {rc}")
         self._client.subscribe(self._registration_topic)
         self._client.subscribe(self._response_topic)
 
@@ -51,17 +55,17 @@ class Operator:
             with self._lock:
                 if payload not in self._clients:
                     self._clients.add(payload)
-                    print(f"Registered client: {payload}")
+                    color_log.log_info(f"Registered client: {payload}")
                     self._client.publish(self._ack_topic, payload)
         elif topic == self._response_topic:
-            print(f"Received feedback:\n{payload}")
+            color_log.log_info(f"Received feedback:\n{payload}")
 
     def run(self):
         self._client.connect(self._broker, self._port, keepalive=60)
         self._client.loop_start()
 
         last_registration_time = time.time()
-        print("Waiting for clients to register...")
+        color_log.log_info("Waiting for clients to register...")
         while True:
             with self._lock:
                 if self._clients:
@@ -70,7 +74,7 @@ class Operator:
                 else:
                     last_registration_time = time.time()
 
-        print(f"Registered clients: {', '.join(self._clients)}")
+        color_log.log_info(f"Registered clients: {', '.join(self._clients)}")
 
         if self._pipeline_mode:
             self.run_pipelines()
@@ -84,7 +88,7 @@ class Operator:
         self._client.disconnect()
 
     def run_pipelines(self):
-        print("Running pipelines...")
+        color_log.log_info("Running pipelines...")
         with self._lock:
             for pipeline_name, pipeline_commands in self._pipelines.items():
                 for client_id in self._clients:
@@ -95,11 +99,11 @@ class Operator:
                         else:
                             message = f"{client_id}|{command_message}"
                         self._client.publish(self._command_topic, message)
-                        print(f"Published command to {client_id}: {command_message}")
+                        color_log.log_warning(f"Published command to {client_id}: {command_message}")
                         time.sleep(1)  # Add a delay to ensure commands are processed sequentially
 
     def run_realtime_mode(self):
-        print("Entering real-time command mode...")
+        color_log.log_info("Entering real-time command mode...")
         while True:
             command = input("Enter command to send to all clients (or 'exit' to quit): ")
             if command.lower() == 'exit':
@@ -112,7 +116,7 @@ class Operator:
                     else:
                         message = f"{client_id}|{command_message}"
                     self._client.publish(self._command_topic, message)
-                    print(f"Published command to {client_id}: {command_message}")
+                    color_log.log_warning(f"Published command to {client_id}: {command_message}")
 
 
 if __name__ == '__main__':
@@ -128,6 +132,7 @@ if __name__ == '__main__':
     pipeline_mode = config.getboolean('operator', 'pipeline_mode')
     realtime_mode = config.getboolean('operator', 'realtime_mode')
     jsonify = config.getboolean('operator', 'jsonify')
+    colorlog = config.getboolean('operator', 'colorlog')
     pipelines = {k: v for k, v in config['operator'].items() if k.startswith('pipeline')}
     operator = Operator(broker,
                         port,
@@ -139,5 +144,6 @@ if __name__ == '__main__':
                         pipelines,
                         pipeline_mode,
                         realtime_mode,
-                        jsonify)
+                        jsonify,
+                        colorlog)
     operator.run()
