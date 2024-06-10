@@ -5,7 +5,7 @@ import os
 import time
 from queue import Queue
 from threading import Thread, Event
-
+from datetime import datetime
 
 class SUT:
     def __init__(self, client_id: str,
@@ -72,13 +72,25 @@ class SUT:
                 break
             print(f"Executing command: {command}")
             try:
+                start_time = datetime.now()
                 result = subprocess.run(command, shell=True, capture_output=True, text=True)
+                end_time = datetime.now()
                 output = result.stdout
                 error = result.stderr
-                feedback = f"Client: {self._client_id}\nCommand: {command}\nOutput: {output}\nError: {error if error else 'None'}"
+                feedback = (f"Client: {self._client_id}\n"
+                            f"Command: {command}\n"
+                            f"Start Time: {start_time.isoformat()} ({start_time})\n"
+                            f"End Time: {end_time.isoformat()} ({end_time})\n"
+                            f"Output: {output}\n"
+                            f"Error: {error if error else 'None'}")
                 self._client.publish(self._response_topic, feedback)
             except Exception as e:
-                error_feedback = f"Client: {self._client_id}\nCommand: {command}\nError: Failed to execute command: {e}"
+                end_time = datetime.now().isoformat()
+                error_feedback = (f"Client: {self._client_id}\n"
+                                  f"Command: {command}\n"
+                                  f"Start Time: {start_time}\n"
+                                  f"End Time: {end_time}\n"
+                                  f"Error: Failed to execute command: {e}")
                 self._client.publish(self._response_topic, error_feedback)
             self._command_queue.task_done()
 
@@ -95,7 +107,6 @@ class SUT:
         self._command_queue.put(None)
         self._worker_thread.join()
         self._registration_thread.join()
-
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()

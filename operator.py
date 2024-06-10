@@ -62,7 +62,6 @@ class Operator:
                         break
                 else:
                     last_registration_time = time.time()
-            time.sleep(1)  # Wait for clients to register
 
         print(f"Registered clients: {', '.join(self._clients)}")
 
