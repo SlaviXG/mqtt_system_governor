@@ -6,7 +6,6 @@ import time
 from threading import Lock
 import color_log
 
-
 class Operator:
     def __init__(self,
                  broker: str,
@@ -21,6 +20,8 @@ class Operator:
                  realtime_mode: bool,
                  jsonify: bool,
                  colorlog: bool,
+                 save_feedback: bool,
+                 feedback_file: str,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._broker = broker
@@ -35,6 +36,8 @@ class Operator:
         self._realtime_mode = realtime_mode
         self._jsonify = jsonify
         self._colorlog = colorlog
+        self._save_feedback = save_feedback
+        self._feedback_file = feedback_file
         color_log.enable_color_logging(self._colorlog)
         self._clients = set()
         self._client = mqtt.Client()
@@ -59,6 +62,12 @@ class Operator:
                     self._client.publish(self._ack_topic, payload)
         elif topic == self._response_topic:
             color_log.log_info(f"Received feedback:\n{payload}")
+            if self._save_feedback:
+                self.save_feedback_to_file(payload)
+
+    def save_feedback_to_file(self, feedback: str):
+        with open(self._feedback_file, 'a') as f:
+            f.write(feedback + '\n')
 
     def run(self):
         self._client.connect(self._broker, self._port, keepalive=60)
@@ -118,7 +127,6 @@ class Operator:
                     self._client.publish(self._command_topic, message)
                     color_log.log_warning(f"Published command to {client_id}: {command_message}")
 
-
 if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read('config.ini')
@@ -133,6 +141,8 @@ if __name__ == '__main__':
     realtime_mode = config.getboolean('operator', 'realtime_mode')
     jsonify = config.getboolean('operator', 'jsonify')
     colorlog = config.getboolean('operator', 'colorlog')
+    save_feedback = config.getboolean('operator', 'save_feedback')
+    feedback_file = config['operator']['feedback_file']
     pipelines = {k: v for k, v in config['operator'].items() if k.startswith('pipeline')}
     operator = Operator(broker,
                         port,
@@ -145,5 +155,7 @@ if __name__ == '__main__':
                         pipeline_mode,
                         realtime_mode,
                         jsonify,
-                        colorlog)
+                        colorlog,
+                        save_feedback,
+                        feedback_file)
     operator.run()
