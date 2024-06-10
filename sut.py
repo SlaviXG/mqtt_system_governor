@@ -88,7 +88,7 @@ class SUT:
             command = self._command_queue.get()
             if command is None:
                 break
-            color_log.log_warning(f"Executing command: {command}")
+            color_log.log_info(f"Executing command: {command}")
             try:
                 start_time = datetime.now()
                 start_iso = start_time.isoformat()
