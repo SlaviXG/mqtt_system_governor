@@ -3,9 +3,11 @@ import configparser
 import subprocess
 import os
 import time
+import json
 from queue import Queue
 from threading import Thread, Event
 from datetime import datetime
+
 
 class SUT:
     def __init__(self, client_id: str,
@@ -15,6 +17,7 @@ class SUT:
                  response_topic: str,
                  registration_topic: str,
                  ack_topic: str,
+                 jsonify: bool,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._client_id = client_id
@@ -24,6 +27,7 @@ class SUT:
         self._response_topic = response_topic
         self._registration_topic = registration_topic
         self._ack_topic = ack_topic
+        self._jsonify = jsonify
         self._client = mqtt.Client(client_id=client_id)
         self._client.on_connect = self.on_connect
         self._client.on_message = self.on_message
@@ -54,7 +58,17 @@ class SUT:
                 print(f"Received acknowledgment for {self._client_id}")
                 self._ack_received.set()
         else:
-            msg_client_id, command = message.split('|', 1)
+            if self._jsonify:
+                try:
+                    data = json.loads(message)
+                    msg_client_id = data['client_id']
+                    command = data['command']
+                except json.JSONDecodeError as e:
+                    print(f"Failed to decode JSON message: {e}")
+                    return
+            else:
+                msg_client_id, command = message.split('|', 1)
+
             if msg_client_id == self._client_id:
                 print(f"Received command for {self._client_id}: {command}")
                 self._command_queue.put(command)
@@ -73,25 +87,49 @@ class SUT:
             print(f"Executing command: {command}")
             try:
                 start_time = datetime.now()
+                start_iso = start_time.isoformat()
+                start_unix = start_time.timestamp()
                 result = subprocess.run(command, shell=True, capture_output=True, text=True)
                 end_time = datetime.now()
+                end_iso = end_time.isoformat()
+                end_unix = end_time.timestamp()
                 output = result.stdout
                 error = result.stderr
-                feedback = (f"Client: {self._client_id}\n"
-                            f"Command: {command}\n"
-                            f"Start Time: {start_time.isoformat()} ({start_time.timestamp()})\n"
-                            f"End Time: {end_time.isoformat()} ({end_time.timestamp()})\n"
-                            f"Output: {output}\n"
-                            f"Error: {error if error else 'None'}")
-                self._client.publish(self._response_topic, feedback)
+                feedback = {
+                    "client_id": self._client_id,
+                    "command": command,
+                    "start_time": f"{start_iso} ({start_unix})",
+                    "end_time": f"{end_iso} ({end_unix})",
+                    "output": output,
+                    "error": error if error else 'None'
+                } if self._jsonify else (
+                    f"Client: {self._client_id}\n"
+                    f"Command: {command}\n"
+                    f"Start Time: {start_iso} ({start_unix})\n"
+                    f"End Time: {end_iso} ({end_unix})\n"
+                    f"Output: {output}\n"
+                    f"Error: {error if error else 'None'}"
+                )
+                self._client.publish(self._response_topic, json.dumps(feedback) if self._jsonify else feedback)
             except Exception as e:
                 end_time = datetime.now()
-                error_feedback = (f"Client: {self._client_id}\n"
-                                  f"Command: {command}\n"
-                                  f"Start Time: {start_time.isoformat()} ({start_time.timestamp()})\n"
-                                  f"End Time: {end_time.isoformat()} ({end_time.timestamp()})\n"
-                                  f"Error: Failed to execute command: {e}")
-                self._client.publish(self._response_topic, error_feedback)
+                end_iso = end_time.isoformat()
+                end_unix = end_time.timestamp()
+                error_feedback = {
+                    "client_id": self._client_id,
+                    "command": command,
+                    "start_time": f"{start_iso} ({start_unix})",
+                    "end_time": f"{end_iso} ({end_unix})",
+                    "error": f"Failed to execute command: {e}"
+                } if self._jsonify else (
+                    f"Client: {self._client_id}\n"
+                    f"Command: {command}\n"
+                    f"Start Time: {start_iso} ({start_unix})\n"
+                    f"End Time: {end_iso} ({end_unix})\n"
+                    f"Error: Failed to execute command: {e}"
+                )
+                self._client.publish(self._response_topic,
+                                     json.dumps(error_feedback) if self._jsonify else error_feedback)
             self._command_queue.task_done()
 
     def run(self):
@@ -118,8 +156,9 @@ if __name__ == '__main__':
     response_topic = config['mqtt']['response_topic']
     registration_topic = config['mqtt']['registration_topic']
     ack_topic = config['mqtt']['ack_topic']
+    jsonify = config.getboolean('operator', 'jsonify')
     client_id = os.getenv('CLIENT_ID') or 'client1'  # Default to 'client1' if CLIENT_ID not set
-    sut = SUT(client_id, broker, port, command_topic, response_topic, registration_topic, ack_topic)
+    sut = SUT(client_id, broker, port, command_topic, response_topic, registration_topic, ack_topic, jsonify)
     try:
         sut.run()
     except KeyboardInterrupt:

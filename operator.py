@@ -1,6 +1,7 @@
 import paho.mqtt.client as mqtt
 import configparser
 import os
+import json
 from threading import Lock, Thread
 import time
 
@@ -17,6 +18,7 @@ class Operator:
                  pipelines: dict,
                  pipeline_mode: bool,
                  realtime_mode: bool,
+                 jsonify: bool,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._broker = broker
@@ -29,6 +31,7 @@ class Operator:
         self._pipelines = pipelines
         self._pipeline_mode = pipeline_mode
         self._realtime_mode = realtime_mode
+        self._jsonify = jsonify
         self._clients = set()
         self._client = mqtt.Client()
         self._client.on_connect = self.on_connect
@@ -86,9 +89,13 @@ class Operator:
             for pipeline_name, pipeline_commands in self._pipelines.items():
                 for client_id in self._clients:
                     for command in pipeline_commands.split(';'):
-                        message = f"{client_id}|{command.strip()}"
+                        command_message = command.strip()
+                        if self._jsonify:
+                            message = json.dumps({"client_id": client_id, "command": command_message})
+                        else:
+                            message = f"{client_id}|{command_message}"
                         self._client.publish(self._command_topic, message)
-                        print(f"Published command to {client_id}: {command.strip()}")
+                        print(f"Published command to {client_id}: {command_message}")
                         time.sleep(1)  # Add a delay to ensure commands are processed sequentially
 
     def run_realtime_mode(self):
@@ -99,9 +106,13 @@ class Operator:
                 break
             with self._lock:
                 for client_id in self._clients:
-                    message = f"{client_id}|{command.strip()}"
+                    command_message = command.strip()
+                    if self._jsonify:
+                        message = json.dumps({"client_id": client_id, "command": command_message})
+                    else:
+                        message = f"{client_id}|{command_message}"
                     self._client.publish(self._command_topic, message)
-                    print(f"Published command to {client_id}: {command.strip()}")
+                    print(f"Published command to {client_id}: {command_message}")
 
 
 if __name__ == '__main__':
@@ -116,6 +127,7 @@ if __name__ == '__main__':
     registration_timeout = int(config['operator']['registration_timeout'])
     pipeline_mode = config.getboolean('operator', 'pipeline_mode')
     realtime_mode = config.getboolean('operator', 'realtime_mode')
+    jsonify = config.getboolean('operator', 'jsonify')
     pipelines = {k: v for k, v in config['operator'].items() if k.startswith('pipeline')}
     operator = Operator(broker,
                         port,
@@ -126,5 +138,6 @@ if __name__ == '__main__':
                         registration_timeout,
                         pipelines,
                         pipeline_mode,
-                        realtime_mode)
+                        realtime_mode,
+                        jsonify)
     operator.run()
