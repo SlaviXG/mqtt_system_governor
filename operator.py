@@ -6,6 +6,7 @@ import time
 from threading import Lock
 import color_log
 
+
 class Operator:
     def __init__(self,
                  broker: str,
@@ -127,6 +128,7 @@ class Operator:
                     self._client.publish(self._command_topic, message)
                     color_log.log_warning(f"Published command to {client_id}: {command_message}")
 
+
 if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read('config.ini')
@@ -137,8 +139,8 @@ if __name__ == '__main__':
     registration_topic = config['mqtt']['registration_topic']
     ack_topic = config['mqtt']['ack_topic']
     registration_timeout = int(config['operator']['registration_timeout'])
-    pipeline_mode = config.getboolean('operator', 'pipeline_mode')
-    realtime_mode = config.getboolean('operator', 'realtime_mode')
+    pipeline_mode = config.getboolean('operator', 'enable_pipeline_mode')
+    realtime_mode = config.getboolean('operator', 'enable_realtime_mode')
     jsonify = config.getboolean('operator', 'jsonify')
     colorlog = config.getboolean('operator', 'colorlog')
     save_feedback = config.getboolean('operator', 'save_feedback')
