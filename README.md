@@ -1,6 +1,6 @@
-# MQTT System Stress Tester
+# MQTT System Governor
 
-This repository contains a simple MQTT client-server setup where the server sends commands to measure system performance, and the subscribers execute these commands and report the results.
+This repository contains a simple MQTT client-server setup where the server sends commands that get executed on each of the connected clients (subscribers), primarily used for measuring system performance and testing.
 
 ## Prerequisites
 
@@ -12,13 +12,13 @@ This repository contains a simple MQTT client-server setup where the server send
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/SlaviXG/mqtt-system-stress-tester.git
-   cd mqtt-system-stress-tester
+   git clone https://github.com/SlaviXG/mqtt-system-governor.git
+   cd mqtt-system-governor
    ```
 
 2. **Install the Required Python Packages:**
    ```bash
-   pip install paho-mqtt
+   pip install paho-mqtt colorama
    ```
    
 3. **Set Up the MQTT Broker:** <br>
