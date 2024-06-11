@@ -115,7 +115,7 @@ class Operator:
     def run_realtime_mode(self):
         color_log.log_info("Entering real-time command mode...")
         while True:
-            command = input("Enter command to send to all clients (or 'exit' to quit): ")
+            command = input("Enter command to send to all clients (or 'exit' to quit): \n")
             if command.lower() == 'exit':
                 break
             with self._lock:
