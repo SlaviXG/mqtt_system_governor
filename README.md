@@ -7,9 +7,15 @@ commands that get executed on client systems).
 
 ## Prerequisites
 
-- Python 3.x
-- `paho-mqtt` library, `colorama` library
-- An MQTT broker (e.g., Mosquitto)
+## Prerequisites
+
+- **Operating System**: Linux (Debian-based distributions recommended for compatibility with `cpufreq-set` and `stress-ng` 
+   commands (as in example), but generally make sure that all the commands are compatible with executing system.)
+- **Python 3.x**
+- **Python Libraries**: 
+  - `paho-mqtt` library
+  - `colorama` library
+- **MQTT Broker**: Ensure you have an MQTT broker running, such as Mosquitto.
 
 ## Installation
 
