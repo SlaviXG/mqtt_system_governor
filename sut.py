@@ -92,45 +92,42 @@ class SUT:
             color_log.log_info(f"Executing command: {command}")
             try:
                 start_time = datetime.now()
-                start_iso = start_time.isoformat()
                 start_unix = start_time.timestamp()
                 result = subprocess.run(command, shell=True, capture_output=True, text=True)
                 end_time = datetime.now()
-                end_iso = end_time.isoformat()
                 end_unix = end_time.timestamp()
                 output = result.stdout
                 error = result.stderr
                 feedback = {
                     "client_id": self._client_id,
                     "command": command,
-                    "start_time": f"{start_iso} ({start_unix})",
-                    "end_time": f"{end_iso} ({end_unix})",
+                    "start_time": f"{start_unix}",
+                    "end_time": f"{end_unix}",
                     "output": output,
                     "error": error if error else 'None'
                 } if self._jsonify else (
                     f"Client: {self._client_id}\n"
                     f"Command: {command}\n"
-                    f"Start Time: {start_iso} ({start_unix})\n"
-                    f"End Time: {end_iso} ({end_unix})\n"
+                    f"Start Time: {start_unix}\n"
+                    f"End Time: {end_unix}\n"
                     f"Output: {output}\n"
                     f"Error: {error if error else 'None'}"
                 )
                 self._client.publish(self._response_topic, json.dumps(feedback) if self._jsonify else feedback)
             except Exception as e:
                 end_time = datetime.now()
-                end_iso = end_time.isoformat()
                 end_unix = end_time.timestamp()
                 error_feedback = {
                     "client_id": self._client_id,
                     "command": command,
-                    "start_time": f"{start_iso} ({start_unix})",
-                    "end_time": f"{end_iso} ({end_unix})",
+                    "start_time": f"{start_unix}",
+                    "end_time": f"{end_unix}",
                     "error": f"Failed to execute command: {e}"
                 } if self._jsonify else (
                     f"Client: {self._client_id}\n"
                     f"Command: {command}\n"
-                    f"Start Time: {start_iso} ({start_unix})\n"
-                    f"End Time: {end_iso} ({end_unix})\n"
+                    f"Start Time: {start_unix}\n"
+                    f"End Time: {end_unix}\n"
                     f"Error: Failed to execute command: {e}"
                 )
                 self._client.publish(self._response_topic,
