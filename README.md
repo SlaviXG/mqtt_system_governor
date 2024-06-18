@@ -144,6 +144,9 @@ The Commander is a customizable MQTT client designed to send commands to specifi
 via the MQTT broker and receive feedback on command execution. The Commander can be configured to format messages 
 in JSON or plain text, and it can be extended or implemented in other custom programs to suit specific needs.
 
+![image](https://github.com/SlaviXG/mqtt-system-governor/assets/78792148/dc863a08-7000-4a1b-b750-627b52bedf75)
+
+
 ### Key Features
 
 - **Send Commands**: Send commands to clients using the MQTT command_loader_topic.
