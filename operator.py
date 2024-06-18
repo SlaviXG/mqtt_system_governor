@@ -15,6 +15,7 @@ class Operator:
                  response_topic: str,
                  registration_topic: str,
                  ack_topic: str,
+                 command_loader_topic: str,
                  registration_timeout: int,
                  pipelines: dict,
                  pipeline_mode: bool,
@@ -23,6 +24,7 @@ class Operator:
                  colorlog: bool,
                  save_feedback: bool,
                  feedback_file: str,
+                 receive_commands: bool,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._broker = broker
@@ -31,6 +33,7 @@ class Operator:
         self._response_topic = response_topic
         self._registration_topic = registration_topic
         self._ack_topic = ack_topic
+        self._command_loader_topic = command_loader_topic
         self._registration_timeout = registration_timeout
         self._pipelines = pipelines
         self._pipeline_mode = pipeline_mode
@@ -39,6 +42,7 @@ class Operator:
         self._colorlog = colorlog
         self._save_feedback = save_feedback
         self._feedback_file = feedback_file
+        self._receive_commands = receive_commands
         color_log.enable_color_logging(self._colorlog)
         self._clients = set()
         self._client = mqtt.Client()
@@ -50,6 +54,8 @@ class Operator:
         color_log.log_info(f"Connected with result code {rc}")
         self._client.subscribe(self._registration_topic)
         self._client.subscribe(self._response_topic)
+        if self._receive_commands:
+            self._client.subscribe(self._command_loader_topic)
 
     def on_message(self, client, userdata, msg):
         topic = msg.topic
@@ -65,6 +71,25 @@ class Operator:
             color_log.log_info(f"Received feedback:\n{payload}")
             if self._save_feedback:
                 self.save_feedback_to_file(payload)
+        elif topic == self._command_loader_topic:
+            self.handle_command_loader(payload)
+
+    def handle_command_loader(self, payload):
+        try:
+            command_data = json.loads(payload)
+            client_id = command_data.get('client_id')
+            command = command_data.get('command')
+            if client_id and command:
+                color_log.log_warning(f"Published command to {client_id}: {command}")
+                if self._jsonify:
+                    message = json.dumps({"client_id": client_id, "command": command})
+                else:
+                    message = f"{client_id}|{command}"
+                self._client.publish(self._command_topic, message)
+            else:
+                color_log.log_error("Invalid command format")
+        except json.JSONDecodeError as e:
+            color_log.log_error(f"Failed to decode JSON: {e}")
 
     def save_feedback_to_file(self, feedback: str):
         with open(self._feedback_file, 'a') as f:
@@ -138,6 +163,7 @@ if __name__ == '__main__':
     response_topic = config['mqtt']['response_topic']
     registration_topic = config['mqtt']['registration_topic']
     ack_topic = config['mqtt']['ack_topic']
+    command_loader_topic = config['mqtt']['command_loader_topic']
     registration_timeout = int(config['operator']['registration_timeout'])
     pipeline_mode = config.getboolean('operator', 'enable_pipeline_mode')
     realtime_mode = config.getboolean('operator', 'enable_realtime_mode')
@@ -145,6 +171,7 @@ if __name__ == '__main__':
     colorlog = config.getboolean('operator', 'colorlog')
     save_feedback = config.getboolean('operator', 'save_feedback')
     feedback_file = config['operator']['feedback_file']
+    receive_commands = config.getboolean('operator', 'receive_commands')
     pipelines = {k: v for k, v in config['operator'].items() if k.startswith('pipeline')}
     operator = Operator(broker,
                         port,
@@ -152,6 +179,7 @@ if __name__ == '__main__':
                         response_topic,
                         registration_topic,
                         ack_topic,
+                        command_loader_topic,
                         registration_timeout,
                         pipelines,
                         pipeline_mode,
@@ -159,5 +187,6 @@ if __name__ == '__main__':
                         jsonify,
                         colorlog,
                         save_feedback,
-                        feedback_file)
+                        feedback_file,
+                        receive_commands)
     operator.run()

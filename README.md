@@ -90,6 +90,7 @@ This guide explains how to set up the configuration file (`config.ini`) and what
 - **response_topic**: The MQTT topic for receiving responses from the clients. Default is `system_performance/responses`.
 - **registration_topic**: The MQTT topic for client registration. Default is `clients/registration`.
 - **ack_topic**: The MQTT topic for acknowledgment of client registration. Default is `clients/acknowledgment`.
+- **command_loader_topic**: The MQTT topic for loading commands to be sent to clients. Default is system_performance/command_loader.
 
 ### [operator] Section
 
@@ -100,6 +101,9 @@ This guide explains how to set up the configuration file (`config.ini`) and what
 - **colorlog**: Boolean option to enable or disable color logging in the terminal. If `True`, logs will be colored for better readability. Default is `True`.
 - **save_feedback**: Boolean option to enable or disable saving feedback to a file. If `True`, feedback from clients will be saved to the specified feedback file. Default is `True`.
 - **feedback_file**: The name of the file where feedback will be saved. Default is `feedback.txt`.
+
+### [commander] Section
+**jsonify**: Boolean option to enable or disable JSON formatting of messages. If True, messages will be formatted as JSON. Default is True.
 
 ### Pipeline Commands
 
@@ -115,6 +119,7 @@ command_topic = system_performance/commands
 response_topic = system_performance/responses
 registration_topic = clients/registration
 ack_topic = clients/acknowledgment
+command_loader_topic = system_performance/command_loader
 
 [operator]
 registration_timeout = 5
@@ -124,7 +129,90 @@ jsonify = True
 colorlog = True
 save_feedback = True
 feedback_file = feedback.txt
+receive_commands = True
 pipeline1 = sudo cpufreq-set -r -f 600000; stress-ng --cpu 0 --timeout 60s --metrics-brief
 pipeline2 = sudo cpufreq-set -r -f 1200000; stress-ng --cpu 0 --timeout 60s --metrics-brief
 pipeline3 = sudo cpufreq-set -r -f 1800000; stress-ng --cpu 0 --timeout 60s --metrics-brief
+
+[commander]
+jsonify = True
 ```
+
+## Commander Introduction
+
+The Commander is a customizable MQTT client designed to send commands to specific clients (Systems Under Test, or SUTs) 
+via the MQTT broker and receive feedback on command execution. The Commander can be configured to format messages 
+in JSON or plain text, and it can be extended or implemented in other custom programs to suit specific needs.
+
+### Key Features
+
+- **Send Commands**: Send commands to clients using the MQTT command_loader_topic.
+- **Receive Feedback**: Receive and process feedback from clients using the MQTT response_topic.
+- **Configurable Format**: Configure whether messages are formatted as JSON or plain text.
+- **Customizable**: Extend the base Commander class to implement custom behavior or integrate with other systems.
+
+### How to Use
+
+1. **Set Up Configuration**: Ensure the config.ini file is properly configured with the MQTT broker details and the 
+desired settings for JSON formatting.
+2. **Run the Commander**: Execute the commander.py script to start the Commander.
+3. **Send Commands**: Enter the client ID and the command to send when prompted. The Commander will publish the command to the command_loader_topic.
+4. **Receive Feedback**: The Commander will automatically subscribe to the response_topic and print received feedback to the console.
+
+### Example Usage
+
+```shell
+python commander.py
+```
+
+### Customizing the Commander
+
+The BaseCommander class is designed as a customizable base. You can extend this class to implement custom behavior 
+or integrate with other systems. For example, you could override the on_message method to process feedback differently 
+or add new methods to handle specific types of commands.
+
+### Example of Extending the BaseCommander
+
+Here is an example of how you can extend the BaseCommander to create a custom commander:
+```python
+from commander import BaseCommander
+
+class CustomCommander(BaseCommander):
+    def on_message(self, client, userdata, msg):
+        feedback = msg.payload.decode()
+        if self._jsonify:
+            try:
+                feedback = json.loads(feedback)
+                # Custom processing of feedback
+                print(f"Custom received feedback:\n{json.dumps(feedback, indent=2)}")
+            except json.JSONDecodeError as e:
+                print(f"Failed to decode JSON feedback: {e}\nRaw feedback: {feedback}")
+        else:
+            print(f"Custom received feedback:\n{feedback}")
+
+if __name__ == '__main__':
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    broker = os.getenv('MQTT_BROKER') or config['mqtt']['broker']
+    port = int(config['mqtt']['port'])
+    command_loader_topic = config['mqtt']['command_loader_topic']
+    response_topic = config['mqtt']['response_topic']
+    jsonify = config.getboolean('commander', 'jsonify')
+
+    custom_commander = CustomCommander(broker, port, command_loader_topic, response_topic, jsonify)
+    custom_commander.connect()
+
+    try:
+        while True:
+            client_id = input("Enter the client ID: ")
+            command = input("Enter the command to send: ")
+            custom_commander.send_command(client_id, command)
+            time.sleep(1)  # Add a small delay to ensure commands are processed
+    except KeyboardInterrupt:
+        print("Exiting...")
+    finally:
+        custom_commander.disconnect()
+```
+
+The BaseCommander provides a flexible and extensible way to manage command execution and feedback in a distributed system, 
+making it a valuable tool for system operators and developers.
