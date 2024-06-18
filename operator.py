@@ -80,16 +80,27 @@ class Operator:
             client_id = command_data.get('client_id')
             command = command_data.get('command')
             if client_id and command:
-                color_log.log_warning(f"Published command to {client_id}: {command}")
-                if self._jsonify:
-                    message = json.dumps({"client_id": client_id, "command": command})
+                if client_id.lower() == 'all':
+                    self.send_command_to_all_clients(command)
                 else:
-                    message = f"{client_id}|{command}"
-                self._client.publish(self._command_topic, message)
+                    self.send_command_to_client(client_id, command)
             else:
                 color_log.log_error("Invalid command format")
         except json.JSONDecodeError as e:
             color_log.log_error(f"Failed to decode JSON: {e}")
+
+    def send_command_to_all_clients(self, command):
+        with self._lock:
+            for client_id in self._clients:
+                self.send_command_to_client(client_id, command)
+
+    def send_command_to_client(self, client_id, command):
+        color_log.log_warning(f"Published command to {client_id}: {command}")
+        if self._jsonify:
+            message = json.dumps({"client_id": client_id, "command": command})
+        else:
+            message = f"{client_id}|{command}"
+        self._client.publish(self._command_topic, message)
 
     def save_feedback_to_file(self, feedback: str):
         with open(self._feedback_file, 'a') as f:

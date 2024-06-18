@@ -45,6 +45,8 @@ class BaseCommander:
         self._client.disconnect()
 
     def send_command(self, client_id, command):
+        if client_id.lower() == 'all':
+            client_id = 'all'
         if self._jsonify:
             message = json.dumps({"client_id": client_id, "command": command})
         else:
@@ -67,7 +69,7 @@ if __name__ == '__main__':
 
     try:
         while True:
-            client_id = input("Enter the client ID: ")
+            client_id = input("Enter the client ID (or 'all' to send to all clients): ")
             command = input("Enter the command to send: ")
             commander.send_command(client_id, command)
             time.sleep(1)  # Add a small delay to ensure commands are processed
