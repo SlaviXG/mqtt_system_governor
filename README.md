@@ -159,7 +159,7 @@ in JSON or plain text, and it can be extended or implemented in other custom pro
 1. **Set Up Configuration**: Ensure the config.ini file is properly configured with the MQTT broker details and the 
 desired settings for JSON formatting.
 2. **Run the Commander**: Execute the commander.py script to start the Commander.
-3. **Send Commands**: Enter the client ID and the command to send when prompted. The Commander will publish the command to the command_loader_topic.
+3. **Send Commands**: Enter the client ID (or 'all' to send to all clients) and the command to send when prompted. The Commander will publish the command to the command_loader_topic.
 4. **Receive Feedback**: The Commander will automatically subscribe to the response_topic and print received feedback to the console.
 
 ### Example Usage
