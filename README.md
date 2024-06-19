@@ -1,4 +1,4 @@
-# MQTT System Governor
+![image](https://github.com/SlaviXG/mqtt_system_governor/assets/78792148/eb90fe4a-f690-4974-80a7-3c5704daf23d)# MQTT System Governor
 
 This repository contains a simple MQTT client-server setup where the server sends commands that get executed 
 on each of the connected clients (subscribers), primarily used for measuring system performance and testing.
@@ -21,8 +21,8 @@ commands that get executed on client systems).
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/SlaviXG/mqtt-system-governor.git
-   cd mqtt-system-governor
+   git clone https://github.com/SlaviXG/mqtt_system_governor.git
+   cd mqtt_system_governor
    ```
 
 2. **Install the Required Python Packages:**
@@ -144,7 +144,7 @@ The Commander is a customizable MQTT client designed to send commands to specifi
 via the MQTT broker and receive feedback on command execution. The Commander can be configured to format messages 
 in JSON or plain text, and it can be extended or implemented in other custom programs to suit specific needs.
 
-![image](https://github.com/SlaviXG/mqtt-system-governor/assets/78792148/0d35aa33-4227-46dc-9f2c-5a8c5622b88a)
+![image](https://github.com/SlaviXG/mqtt_system_governor/assets/78792148/770e92cf-c445-4d67-ae7a-88a452224d1e)
 
 
 ### Key Features
