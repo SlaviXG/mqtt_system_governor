@@ -1,4 +1,4 @@
-![image](https://github.com/SlaviXG/mqtt_system_governor/assets/78792148/eb90fe4a-f690-4974-80a7-3c5704daf23d)# MQTT System Governor
+# MQTT System Governor
 
 This repository contains a simple MQTT client-server setup where the server sends commands that get executed 
 on each of the connected clients (subscribers), primarily used for measuring system performance and testing.
