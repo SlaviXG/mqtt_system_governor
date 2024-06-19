@@ -55,16 +55,20 @@ class BaseCommander:
         print(f"Sent command to {client_id}: {command}")
 
 
-if __name__ == '__main__':
+def init_commander(config_path: os.path) -> BaseCommander:
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config.read(config_path)
     broker = os.getenv('MQTT_BROKER') or config['mqtt']['broker']
     port = int(config['mqtt']['port'])
     command_loader_topic = config['mqtt']['command_loader_topic']
     response_topic = config['mqtt']['response_topic']
     jsonify = config.getboolean('commander', 'jsonify')
 
-    commander = BaseCommander(broker, port, command_loader_topic, response_topic, jsonify)
+    return BaseCommander(broker, port, command_loader_topic, response_topic, jsonify)
+
+
+if __name__ == '__main__':
+    commander = init_commander('config.ini')
     commander.connect()
 
     try:
