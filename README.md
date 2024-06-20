@@ -2,7 +2,7 @@
 
 This repository contains a simple MQTT client-server setup where the server sends commands that get executed 
 on each of the connected clients (subscribers), primarily used for measuring system performance and testing.
-The special feature if this application is the opportunity to build and run pipelines (sequences of terminal
+The special feature in this application is the opportunity to build and run pipelines (sequences of terminal
 commands that get executed on client systems).
 
 ## Prerequisites
