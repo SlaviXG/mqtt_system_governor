@@ -1,3 +1,4 @@
+import argparse
 import paho.mqtt.client as mqtt
 import configparser
 import subprocess
@@ -150,8 +151,12 @@ class SUT:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="System Under Test (SUT) for processing commands.")
+    parser.add_argument('--config', type=str, default='config.ini', help='Path to the configuration file.')
+    args = parser.parse_args()
+
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config.read(args.config)
     broker = os.getenv('MQTT_BROKER') if os.getenv('MQTT_BROKER') is not None else config['mqtt']['broker']
     port = int(config['mqtt']['port'])
     command_topic = config['mqtt']['command_topic']

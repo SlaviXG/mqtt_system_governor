@@ -1,3 +1,4 @@
+import argparse
 import paho.mqtt.client as mqtt
 import configparser
 import os
@@ -68,7 +69,11 @@ def init_commander(config_path: os.path) -> BaseCommander:
 
 
 if __name__ == '__main__':
-    commander = init_commander('config.ini')
+    parser = argparse.ArgumentParser(description="Commander for sending commands to clients.")
+    parser.add_argument('--config', type=str, default='config.ini', help='Path to the configuration file.')
+    args = parser.parse_args()
+
+    commander = init_commander(args.config)
     commander.connect()
 
     try:

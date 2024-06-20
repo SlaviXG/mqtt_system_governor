@@ -1,3 +1,4 @@
+import argparse
 import paho.mqtt.client as mqtt
 import configparser
 import os
@@ -166,8 +167,12 @@ class Operator:
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Operator for managing commands and clients.")
+    parser.add_argument('--config', type=str, default='config.ini', help='Path to the configuration file.')
+    args = parser.parse_args()
+
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    config.read(args.config)
     broker = os.getenv('MQTT_BROKER') or config['mqtt']['broker']
     port = int(config['mqtt']['port'])
     command_topic = config['mqtt']['command_topic']
