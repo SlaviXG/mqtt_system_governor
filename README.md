@@ -95,13 +95,14 @@ This guide explains how to set up the configuration file (`config.ini`) and what
 ### [operator] Section
 
 - **registration_timeout**: The time (in seconds) to wait for clients to register. Default is `5`.
-- **enable_pipeline_mode**: Boolean option to enable or disable pipeline mode. If `True`, the defined pipelines will be executed in order. Default is `True`.
+- **enable_pipeline_mode**: Boolean option to enable or disable pipeline mode. If `True`, the defined pipelines will be executed in order. Default is `False`.
 - **enable_realtime_mode**: Boolean option to enable or disable real-time mode. If `True`, commands can be sent to clients in real-time via the terminal. Default is `True`.
 - **jsonify**: Boolean option to enable or disable JSON formatting of messages. If `True`, messages will be formatted as JSON. Default is `True`.
-- **colorlog**: Boolean option to enable or disable color logging in the terminal. If `True`, logs will be colored for better readability. Default is `True`.
+- **colorlog**: Boolean option to enable or disable color logging in the terminal. If `True`, logs will be colored for better readability. Default is `False`.
 - **save_feedback**: Boolean option to enable or disable saving feedback to a file. If `True`, feedback from clients will be saved to the specified feedback file. Default is `True`.
 - **feedback_file**: The name of the file where feedback will be saved. Default is `feedback.txt`.
-
+- **receive_commands**: Boolean option to receive commands from the program that implements BaseCommander. Default is `True`.
+  
 ### [commander] Section
 **jsonify**: Boolean option to enable or disable JSON formatting of messages. If True, messages will be formatted as JSON. Default is True.
 
