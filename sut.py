@@ -5,7 +5,7 @@ import subprocess
 import os
 import time
 import json
-from queue import Queue
+from queue import Queue, Empty
 from threading import Thread, Event
 from datetime import datetime
 import color_log
@@ -79,7 +79,7 @@ class SUT:
                 self._command_queue.put(command)
 
     def _send_registration(self):
-        time.sleep(0.5) # Wait for starting execution of other threads
+        time.sleep(0.5)  # Wait for starting execution of other threads
         while not self._ack_received.is_set():
             self._client.publish(self._registration_topic, self._client_id)
             color_log.log_info(f"Sent registration for {self._client_id}")
@@ -87,7 +87,10 @@ class SUT:
 
     def _process_commands(self):
         while not self._stop_event.is_set():
-            command = self._command_queue.get()
+            try:
+                command = self._command_queue.get(timeout=1)  # Non-blocking get with timeout
+            except Empty:
+                continue  # Loop again if no command is received
             if command is None:
                 break
             color_log.log_info(f"Executing command: {command}")
@@ -141,13 +144,14 @@ class SUT:
             self._client.connect(self._broker, self._port, 60)
         except Exception as e:
             color_log.log_error(f"Connection to broker failed: {e}")
-        self._client.loop_forever()
+        self._client.loop_start()
 
     def stop(self):
         self._stop_event.set()
         self._command_queue.put(None)
         self._worker_thread.join()
         self._registration_thread.join()
+        self._client.loop_stop()
 
 
 if __name__ == '__main__':
